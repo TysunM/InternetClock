@@ -1,0 +1,578 @@
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+/**
+ * Combines class names using clsx and tailwind-merge
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+/**
+ * Time and Date Utilities
+ */
+export const timeUtils = {
+  /**
+   * Format time with timezone support
+   */
+  formatTime(
+    date: Date = new Date(),
+    format: '12h' | '24h' = '12h',
+    timezone?: string,
+    showSeconds = true
+  ): string {
+    const options: Intl.DateTimeFormatOptions = {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: format === '12h',
+      timeZone: timezone,
+    }
+
+    if (showSeconds) {
+      options.second = '2-digit'
+    }
+
+    return new Intl.DateTimeFormat('en-US', options).format(date)
+  },
+
+  /**
+   * Format date with various styles
+   */
+  formatDate(
+    date: Date = new Date(),
+    style: 'short' | 'medium' | 'long' | 'full' = 'medium',
+    timezone?: string
+  ): string {
+    const options: Intl.DateTimeFormatOptions = {
+      dateStyle: style,
+      timeZone: timezone,
+    }
+
+    return new Intl.DateTimeFormat('en-US', options).format(date)
+  },
+
+  /**
+   * Get timezone offset in hours
+   */
+  getTimezoneOffset(timezone: string): number {
+    const date = new Date()
+    const utc = date.getTime() + (date.getTimezoneOffset() * 60000)
+    const targetTime = new Date(utc + (this.getTimezoneOffsetMs(timezone)))
+    return (targetTime.getTime() - date.getTime()) / (1000 * 60 * 60)
+  },
+
+  /**
+   * Get timezone offset in milliseconds
+   */
+  getTimezoneOffsetMs(timezone: string): number {
+    const now = new Date()
+    const targetDate = new Date(now.toLocaleString("en-US", { timeZone: timezone }))
+    const localDate = new Date(now.toLocaleString("en-US"))
+    return targetDate.getTime() - localDate.getTime()
+  },
+
+  /**
+   * Convert milliseconds to human readable format
+   */
+  msToTime(ms: number): string {
+    const hours = Math.floor(ms / (1000 * 60 * 60))
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((ms % (1000 * 60)) / 1000)
+    const milliseconds = ms % 1000
+
+    if (hours > 0) {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    }
+    
+    if (minutes > 0) {
+      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${Math.floor(milliseconds / 10).toString().padStart(2, '0')}`
+    }
+
+    return `${seconds.toString().padStart(2, '0')}.${Math.floor(milliseconds / 10).toString().padStart(2, '0')}`
+  },
+
+  /**
+   * Get relative time (e.g., "2 minutes ago")
+   */
+  getRelativeTime(date: Date): string {
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+    const now = new Date()
+    const diffInSeconds = Math.floor((date.getTime() - now.getTime()) / 1000)
+
+    if (Math.abs(diffInSeconds) < 60) {
+      return rtf.format(diffInSeconds, 'second')
+    }
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60)
+    if (Math.abs(diffInMinutes) < 60) {
+      return rtf.format(diffInMinutes, 'minute')
+    }
+
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (Math.abs(diffInHours) < 24) {
+      return rtf.format(diffInHours, 'hour')
+    }
+
+    const diffInDays = Math.floor(diffInHours / 24)
+    return rtf.format(diffInDays, 'day')
+  },
+
+  /**
+   * Check if it's daytime based on location
+   */
+  isDaytime(lat: number, lng: number, date: Date = new Date()): boolean {
+    // Simplified sun calculation - you might want to use a more accurate library
+    const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000)
+    const solarDecl = 23.45 * Math.sin(Math.PI * (284 + dayOfYear) / 365)
+    const hourAngle = 15 * (12 - date.getHours())
+    const solarElevation = Math.asin(
+      Math.sin(lat * Math.PI / 180) * Math.sin(solarDecl * Math.PI / 180) +
+      Math.cos(lat * Math.PI / 180) * Math.cos(solarDecl * Math.PI / 180) * Math.cos(hourAngle * Math.PI / 180)
+    )
+    return solarElevation > 0
+  }
+}
+
+/**
+ * Number and Math Utilities
+ */
+export const mathUtils = {
+  /**
+   * Clamp a number between min and max
+   */
+  clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max)
+  },
+
+  /**
+   * Linear interpolation
+   */
+  lerp(start: number, end: number, factor: number): number {
+    return start + (end - start) * factor
+  },
+
+  /**
+   * Map a value from one range to another
+   */
+  mapRange(
+    value: number,
+    fromMin: number,
+    fromMax: number,
+    toMin: number,
+    toMax: number
+  ): number {
+    return toMin + ((value - fromMin) * (toMax - toMin)) / (fromMax - fromMin)
+  },
+
+  /**
+   * Round to specified decimal places
+   */
+  roundTo(value: number, decimals: number): number {
+    const factor = Math.pow(10, decimals)
+    return Math.round(value * factor) / factor
+  },
+
+  /**
+   * Generate random number between min and max
+   */
+  random(min: number, max: number): number {
+    return Math.random() * (max - min) + min
+  },
+
+  /**
+   * Calculate percentage
+   */
+  percentage(value: number, total: number): number {
+    return total === 0 ? 0 : (value / total) * 100
+  }
+}
+
+/**
+ * String Utilities
+ */
+export const stringUtils = {
+  /**
+   * Capitalize first letter
+   */
+  capitalize(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+  },
+
+  /**
+   * Convert string to kebab-case
+   */
+  kebabCase(str: string): string {
+    return str
+      .replace(/([a-z])([A-Z])/g, '$1-$2')
+      .replace(/[\s_]+/g, '-')
+      .toLowerCase()
+  },
+
+  /**
+   * Convert string to camelCase
+   */
+  camelCase(str: string): string {
+    return str
+      .replace(/[-_\s]+(.)?/g, (_, char) => (char ? char.toUpperCase() : ''))
+      .replace(/^[A-Z]/, char => char.toLowerCase())
+  },
+
+  /**
+   * Truncate string with ellipsis
+   */
+  truncate(str: string, length: number, suffix = '...'): string {
+    if (str.length <= length) return str
+    return str.slice(0, length - suffix.length) + suffix
+  },
+
+  /**
+   * Remove HTML tags
+   */
+  stripHtml(str: string): string {
+    return str.replace(/<[^>]*>/g, '')
+  },
+
+  /**
+   * Generate random string
+   */
+  randomString(length: number): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let result = ''
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
+  }
+}
+
+/**
+ * Array Utilities
+ */
+export const arrayUtils = {
+  /**
+   * Remove duplicates from array
+   */
+  unique<T>(array: T[]): T[] {
+    return [...new Set(array)]
+  },
+
+  /**
+   * Shuffle array
+   */
+  shuffle<T>(array: T[]): T[] {
+    const result = [...array]
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]]
+    }
+    return result
+  },
+
+  /**
+   * Chunk array into smaller arrays
+   */
+  chunk<T>(array: T[], size: number): T[][] {
+    const chunks: T[][] = []
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size))
+    }
+    return chunks
+  },
+
+  /**
+   * Get random item from array
+   */
+  sample<T>(array: T[]): T | undefined {
+    return array[Math.floor(Math.random() * array.length)]
+  },
+
+  /**
+   * Group array by key
+   */
+  groupBy<T, K extends keyof T>(array: T[], key: K): Record<string, T[]> {
+    return array.reduce((groups, item) => {
+      const groupKey = String(item[key])
+      groups[groupKey] = groups[groupKey] || []
+      groups[groupKey].push(item)
+      return groups
+    }, {} as Record<string, T[]>)
+  }
+}
+
+/**
+ * Object Utilities
+ */
+export const objectUtils = {
+  /**
+   * Deep clone object
+   */
+  deepClone<T>(obj: T): T {
+    if (obj === null || typeof obj !== 'object') return obj
+    if (obj instanceof Date) return new Date(obj.getTime()) as unknown as T
+    if (obj instanceof Array) return obj.map(item => this.deepClone(item)) as unknown as T
+    if (obj instanceof Object) {
+      const clonedObj = {} as T
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          clonedObj[key] = this.deepClone(obj[key])
+        }
+      }
+      return clonedObj
+    }
+    return obj
+  },
+
+  /**
+   * Check if object is empty
+   */
+  isEmpty(obj: object): boolean {
+    return Object.keys(obj).length === 0
+  },
+
+  /**
+   * Pick specific keys from object
+   */
+  pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+    const result = {} as Pick<T, K>
+    keys.forEach(key => {
+      if (key in obj) {
+        result[key] = obj[key]
+      }
+    })
+    return result
+  },
+
+  /**
+   * Omit specific keys from object
+   */
+  omit<T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
+    const result = { ...obj }
+    keys.forEach(key => {
+      delete result[key]
+    })
+    return result
+  }
+}
+
+/**
+ * Local Storage Utilities (with error handling)
+ */
+export const storageUtils = {
+  /**
+   * Set item in localStorage with error handling
+   */
+  setItem(key: string, value: unknown): boolean {
+    try {
+      localStorage.setItem(key, JSON.stringify(value))
+      return true
+    } catch (error) {
+      console.warn('Failed to save to localStorage:', error)
+      return false
+    }
+  },
+
+  /**
+   * Get item from localStorage with error handling
+   */
+  getItem<T>(key: string, defaultValue?: T): T | null {
+    try {
+      const item = localStorage.getItem(key)
+      return item ? JSON.parse(item) : defaultValue ?? null
+    } catch (error) {
+      console.warn('Failed to read from localStorage:', error)
+      return defaultValue ?? null
+    }
+  },
+
+  /**
+   * Remove item from localStorage
+   */
+  removeItem(key: string): boolean {
+    try {
+      localStorage.removeItem(key)
+      return true
+    } catch (error) {
+      console.warn('Failed to remove from localStorage:', error)
+      return false
+    }
+  },
+
+  /**
+   * Clear all localStorage
+   */
+  clear(): boolean {
+    try {
+      localStorage.clear()
+      return true
+    } catch (error) {
+      console.warn('Failed to clear localStorage:', error)
+      return false
+    }
+  }
+}
+
+/**
+ * Performance Utilities
+ */
+export const performanceUtils = {
+  /**
+   * Debounce function calls
+   */
+  debounce<T extends (...args: any[]) => any>(
+    func: T,
+    delay: number
+  ): (...args: Parameters<T>) => void {
+    let timeoutId: NodeJS.Timeout
+    return (...args: Parameters<T>) => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => func.apply(null, args), delay)
+    }
+  },
+
+  /**
+   * Throttle function calls
+   */
+  throttle<T extends (...args: any[]) => any>(
+    func: T,
+    delay: number
+  ): (...args: Parameters<T>) => void {
+    let lastCall = 0
+    return (...args: Parameters<T>) => {
+      const now = Date.now()
+      if (now - lastCall >= delay) {
+        lastCall = now
+        func.apply(null, args)
+      }
+    }
+  },
+
+  /**
+   * Measure execution time
+   */
+  measureTime<T>(fn: () => T, label?: string): T {
+    const start = performance.now()
+    const result = fn()
+    const end = performance.now()
+    console.log(`${label || 'Function'} took ${end - start} milliseconds`)
+    return result
+  },
+
+  /**
+   * Defer execution to next frame
+   */
+  nextFrame(callback: () => void): void {
+    requestAnimationFrame(callback)
+  }
+}
+
+/**
+ * Validation Utilities
+ */
+export const validationUtils = {
+  /**
+   * Check if value is email
+   */
+  isEmail(value: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(value)
+  },
+
+  /**
+   * Check if value is URL
+   */
+  isUrl(value: string): boolean {
+    try {
+      new URL(value)
+      return true
+    } catch {
+      return false
+    }
+  },
+
+  /**
+   * Check if value is valid timezone
+   */
+  isValidTimezone(timezone: string): boolean {
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: timezone })
+      return true
+    } catch {
+      return false
+    }
+  },
+
+  /**
+   * Check if coordinates are valid
+   */
+  isValidCoordinates(lat: number, lng: number): boolean {
+    return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+  }
+}
+
+/**
+ * Error Utilities
+ */
+export const errorUtils = {
+  /**
+   * Safe async function execution with error handling
+   */
+  async safeAsync<T>(
+    fn: () => Promise<T>,
+    fallback?: T
+  ): Promise<{ data: T | null; error: Error | null }> {
+    try {
+      const data = await fn()
+      return { data, error: null }
+    } catch (error) {
+      console.error('Async operation failed:', error)
+      return { 
+        data: fallback ?? null, 
+        error: error instanceof Error ? error : new Error(String(error))
+      }
+    }
+  },
+
+  /**
+   * Retry function with exponential backoff
+   */
+  async retry<T>(
+    fn: () => Promise<T>,
+    maxAttempts = 3,
+    baseDelay = 1000
+  ): Promise<T> {
+    let lastError: Error
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fn()
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+        
+        if (attempt === maxAttempts) {
+          throw lastError
+        }
+        
+        const delay = baseDelay * Math.pow(2, attempt - 1)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+    
+    throw lastError!
+  }
+}
+
+// Export everything as a single utils object for convenience
+export const utils = {
+  cn,
+  time: timeUtils,
+  math: mathUtils,
+  string: stringUtils,
+  array: arrayUtils,
+  object: objectUtils,
+  storage: storageUtils,
+  performance: performanceUtils,
+  validation: validationUtils,
+  error: errorUtils,
+}
+
+export default utils
